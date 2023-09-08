@@ -2,7 +2,6 @@ const express = require("express");
 const sitemapRouter = new express.Router();
 const { SitemapStream, streamToPromise } = require("sitemap");
 const { createGzip } = require("zlib");
-const { Readable } = require("stream");
 const Sitemap = require("../model/sitemap");
 const Editor = require("../model/editor");
 const Categories = require("../model/categories");

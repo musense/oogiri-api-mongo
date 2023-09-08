@@ -1,5 +1,4 @@
 const express = require("express");
-const { json2html } = require("html2json");
 const Editor = require("../model/editor");
 const Sitemap = require("../model/sitemap");
 const Categories = require("../model/categories");
@@ -7,7 +6,6 @@ const Tags = require("../model/tags");
 const tempEditor = require("../model/tempEditor");
 const draftEditor = require("../model/draftEditor");
 const Ips = require("../model/ip");
-const html2json = require("html2json").html2json;
 const multer = require("multer");
 const sharp = require("sharp");
 const fs = require("fs");
