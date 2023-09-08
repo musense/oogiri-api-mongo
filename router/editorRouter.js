@@ -2044,8 +2044,8 @@ editorRouter.patch(
         res.editor.homeImagePath = homeFilename;
         res.editor.contentImagePath = contentFilename;
       } else {
-        res.editor.homeImagePath = `${LOCAL_DOMAIN}saved_image/homepage/${contentFilename}`;
-        res.editor.contentImagePath = `${LOCAL_DOMAIN}saved_image/content/${contentFilename}`;
+        res.editor.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/homepage/${contentFilename}`;
+        res.editor.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/content/${contentFilename}`;
       }
     }
 
@@ -2176,8 +2176,8 @@ editorRouter.post(
             editorData.homeImagePath = homeFilename;
             editorData.contentImagePath = contentFilename;
           } else {
-            editorData.homeImagePath = `${LOCAL_DOMAIN}saved_image/homepage/${contentFilename}`;
-            editorData.contentImagePath = `${LOCAL_DOMAIN}saved_image/content/${contentFilename}`;
+            editorData.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/homepage/${contentFilename}`;
+            editorData.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/content/${contentFilename}`;
           }
         }
         const newEditor = new Editor(editorData);
@@ -2304,7 +2304,7 @@ editorRouter.post(
         } else {
           // const newHomeUrl = copyFileAndGenerateNewUrl(homeFilename);
           // const newContentUrl = copyFileAndGenerateNewUrl(contentFilename);
-          editorData.contentImagePath = `${LOCAL_DOMAIN}saved_image/content/${contentFilename}`;
+          editorData.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/content/${contentFilename}`;
           // editorData.homeImagePath = newHomeUrl;
           // editorData.contentImagePath = newContentUrl;
         }
