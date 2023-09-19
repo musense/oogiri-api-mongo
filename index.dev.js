@@ -56,12 +56,11 @@ const corsOptions = {
     "http://localhost",
     "http://localhost:3000",
     "http://backstage.wilsonwan.com",
+    "http://backstage.wilsonwan.com:4200",
     "http://backstage.wilsonwan.com:8080",
     "http://backstage.wilsonwan.com:8081",
     "http://wilsonwan.com",
     "http://10.88.0.103:4200",
-    "http://10.88.0.103:3000",
-    "http://10.88.0.103:3001",
     "http://10.88.0.103",
     "http://127.0.0.1:5050",
   ],
@@ -76,23 +75,26 @@ app.use(express.static(__dirname));
 
 app.use(express.json());
 app.use(cors(corsOptions));
-
+app.disable("x-powered-by");
 app.use(function (req, res, next) {
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header(
-    "Access-Control-Allow-Origin",
+  const allowedOrigins = [
     "http://localhost",
     "http://localhost:3000",
     "http://backstage.wilsonwan.com",
+    "http://backstage.wilsonwan.com:4200",
     "http://backstage.wilsonwan.com:8080",
     "http://backstage.wilsonwan.com:8081",
     "http://wilsonwan.com",
     "http://10.88.0.103:4200",
-    "http://10.88.0.103:3000",
-    "http://10.88.0.103:3001",
     "http://10.88.0.103",
-    "http://127.0.0.1:5050"
-  );
+    "http://127.0.0.1:5050",
+  ];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+
+  res.header("Access-Control-Allow-Credentials", true);
   res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,PATCH");
   res.header(
     "Access-Control-Allow-Headers",
