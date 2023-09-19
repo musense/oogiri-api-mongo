@@ -63,9 +63,12 @@ const bannerSchema = mongoose.Schema(
 bannerSchema.path("display").validate(function (value) {
   const now = new Date();
 
-  // 如果display為true，檢查當前日期是否在startDate和endDate之間
+  // 如果display為true，檢查now是否在startDate和endDate之間
   if (value === true) {
-    if (now >= this.startDate && now < this.endDate) {
+    if (
+      (now >= this.startDate && now < this.endDate) ||
+      this.eternal === true
+    ) {
       return true;
     } else {
       return false;
@@ -85,15 +88,11 @@ const checkStatus = function (next) {
   if (this.startDate > now) {
     this.status = "已排程";
   } else if (
-    this.startDate <= now &&
-    now < this.endDate &&
-    this.display === true
+    this.eternal === true ||
+    (this.startDate <= now && now < this.endDate && this.display === true)
   ) {
     this.status = "進行中";
-  } else if (
-    now > this.endDate ||
-    (this.startDate <= now && this.display === false)
-  ) {
+  } else if (now > this.endDate || this.display === false) {
     this.status = "下架";
   }
   next();

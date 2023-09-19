@@ -1,13 +1,9 @@
 const express = require("express");
 const Banner = require("../model/banner");
-const Editor = require("../model/editor");
-const Categories = require("../model/categories");
-const Tags = require("../model/tags");
 const multer = require("multer");
 const sharp = require("sharp");
 const fs = require("fs");
 const slugify = require("slugify");
-const Log = require("../model/changeLog");
 const logChanges = require("../logChanges");
 const verifyUser = require("../verifyUser");
 const url = require("url");
@@ -15,6 +11,8 @@ const bannerRouter = new express.Router();
 require("dotenv").config();
 
 const LOCAL_DOMAIN = process.env.LOCAL_DOMAIN;
+const BANNER_CONTENT_PATH = process.env.BANNER_CONTENT_PATH;
+const BANNER_HOMEPAGE_PATH = process.env.BANNER_HOMEPAGE_PATH;
 const BANNER_DISPLAY_LIMIT = process.env.BANNER_DISPLAY_LIMIT;
 
 async function getMaxSerialNumber() {
@@ -180,27 +178,15 @@ async function processImage(file, originalFilename) {
       Date.now() +
       extension;
 
-    // if (file.fieldname === "homeImagePath") {
-    //   fs.writeFileSync(
-    //     `C:/Users/user/Desktop/officail-website/UAT WEB/SIT_WEB_API/saved_image/homepage/${newFilename}`,
-    //     // `/home/saved_image/homepage/${newFilename}`,
-    //     compressedImage2.data
-    //   );
-    //   return newFilename;
-    // } else {
-    // save compressed image to disk
     fs.writeFileSync(
-      `C:/Users/user/Desktop/officail-website/UAT WEB/SIT_WEB_API/saved_image/banner/content/${newFilename}`,
-      // `/home/saved_image/content/${newFilename}`,
+      `${BANNER_CONTENT_PATH}/${newFilename}`,
       compressedImage.data
     );
     fs.writeFileSync(
-      `C:/Users/user/Desktop/officail-website/UAT WEB/SIT_WEB_API/saved_image/banner/homepage/${newFilename}`,
-      // `/home/saved_image/homepage/${newFilename}`,
+      `${BANNER_HOMEPAGE_PATH}/${newFilename}`,
       compressedImage2.data
     );
     return newFilename;
-    // }
   } else {
     return null;
   }
@@ -307,13 +293,12 @@ bannerRouter.get(
         });
         return;
       }
-      console.log(start);
-      console.log(end);
       if (startDate && endDate) {
         query.$or = [
           { startDate: { $gte: start, $lte: end } },
           { endDate: { $gte: start, $lte: end } },
           { startDate: { $lte: start }, endDate: { $gte: end } },
+          { eternal: true },
         ];
       } else if (startDate && !endDate) {
         start.setUTCHours(0, 0, 0, 0);
@@ -322,6 +307,7 @@ bannerRouter.get(
         query.$or = [
           { startDate: { $gte: start, $lt: end } },
           { endDate: { $gte: start, $lt: end } },
+          { eternal: true },
         ];
       } else if (!startDate && endDate) {
         end.setUTCHours(0, 0, 0, 0);
@@ -330,6 +316,7 @@ bannerRouter.get(
         query.$or = [
           { startDate: { $gte: start, $lt: end } },
           { endDate: { $gte: start, $lt: end } },
+          { eternal: true },
         ];
       }
 
@@ -464,7 +451,7 @@ bannerRouter.patch("/banner/checkScheduleBanners", async (req, res) => {
 
 bannerRouter.patch(
   "/banner/:id",
-  // verifyUser,
+  verifyUser,
   uploadImage(),
   parseRequestBody,
   getBanner,
@@ -480,7 +467,6 @@ bannerRouter.patch(
       endDate,
     } = res;
 
-    console.log(req.files);
     const contentImagePath =
       req.files.contentImagePath && req.files.contentImagePath[0];
     const homeImagePath = req.files.homeImagePath && req.files.homeImagePath[0];
@@ -498,8 +484,8 @@ bannerRouter.patch(
         res.banner.homeImagePath = homeFilename;
         res.banner.contentImagePath = contentFilename;
       } else {
-        res.banner.homeImagePath = `${LOCAL_DOMAIN}saved_image/banner/homepage/${contentFilename}`;
-        res.banner.contentImagePath = `${LOCAL_DOMAIN}saved_image/banner/content/${contentFilename}`;
+        res.banner.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/banner/homepage/${contentFilename}`;
+        res.banner.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/banner/content/${contentFilename}`;
       }
     }
 
@@ -532,7 +518,7 @@ bannerRouter.patch(
 
 bannerRouter.post(
   "/banner",
-  //   verifyUser,
+  verifyUser,
   uploadImage(),
   parseRequestBody,
   async (req, res) => {
@@ -541,7 +527,6 @@ bannerRouter.post(
     let sort = res.sort;
     //檢查結束時間是否大於開始時間
     const serialNumber = await getMaxSerialNumber();
-    console.log(req.files);
     let contentImagePath =
       req.files && req.files.contentImagePath && req.files.contentImagePath[0];
     let homeImagePath =
@@ -561,7 +546,8 @@ bannerRouter.post(
     if (!isPositiveInteger(sort)) {
       message += "sort must be a positive integer\n";
     }
-    if (startDate >= endDate) {
+    //如果eternal=true就不檢查
+    if (startDate >= endDate && eternal === false) {
       message += "startDate cannot be greater than endDate.\n";
     }
     if (message) {
@@ -598,8 +584,8 @@ bannerRouter.post(
             newBannerData.homeImagePath = homeFilename;
             newBannerData.contentImagePath = contentFilename;
           } else {
-            newBannerData.homeImagePath = `${LOCAL_DOMAIN}saved_image/banner/homepage/${contentFilename}`;
-            newBannerData.contentImagePath = `${LOCAL_DOMAIN}saved_image/banner/content/${contentFilename}`;
+            newBannerData.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/banner/homepage/${contentFilename}`;
+            newBannerData.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/banner/content/${contentFilename}`;
           }
         }
         const newBanner = new Banner(newBannerData);
