@@ -30,6 +30,7 @@ const corsOptions = {
 
 app.use(express.json());
 app.use(cors(corsOptions));
+app.disable("x-powered-by");
 
 //set session attribute
 app.use(
@@ -53,12 +54,15 @@ app.use(
 );
 
 app.use(function (req, res, next) {
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header(
-    "Access-Control-Allow-Origin",
+  const allowedOrigins = [
     "http://uat-dashboard.oogiriinfo.com",
-    "http://uat-front.oogiriinfo.com"
-  );
+    "http://uat-front.oogiriinfo.com",
+  ];
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+  res.header("Access-Control-Allow-Credentials", true);
   res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,PATCH");
   res.header(
     "Access-Control-Allow-Headers",
