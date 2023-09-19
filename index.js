@@ -5,6 +5,7 @@ const editorRouter = require("./router/editorRouter");
 const userRouter = require("./router/userRouter");
 const sitemapRouter = require("./router/sitemapRouter");
 const categoryRouter = require("./router/categoryRouter");
+const bannerRouter = require("./router/bannerRouter");
 const logRouter = require("./router/logRouter");
 require("dotenv").config();
 require("./mongoose");
@@ -86,6 +87,7 @@ app.use(function (req, res, next) {
   next();
 });
 
+app.use(bannerRouter);
 app.use(sitemapRouter);
 app.use(categoryRouter);
 app.use(userRouter);

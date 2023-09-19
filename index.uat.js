@@ -5,6 +5,7 @@ const editorRouter = require("./router/editorRouter");
 const userRouter = require("./router/userRouter");
 const sitemapRouter = require("./router/sitemapRouter");
 const categoryRouter = require("./router/categoryRouter");
+const bannerRouter = require("./router/bannerRouter");
 require("dotenv").config();
 require("./mongoose");
 const session = require("express-session");
@@ -76,6 +77,7 @@ app.use(categoryRouter);
 app.use(userRouter);
 app.use(editorRouter);
 app.use(tagRouter);
+app.use(bannerRouter);
 
 // server.listen(4200)
 app.listen(PORT, () => {
