@@ -1,4 +1,3 @@
-// redisCache.js
 const redis = require("redis");
 const client = redis.createClient({ host: "127.0.0.1", port: 6379 });
 
@@ -7,14 +6,12 @@ client.on("error", (error) => {
 });
 
 async function connect() {
-  if (client.status !== "connecting" && client.status !== "ready") {
-    await client.connect();
-  }
+  await client.connect();
 }
 connect();
 
 const setCache = async (key, value, expired) => {
-  await client.set(key, JSON.stringify(value), { EX: expired });
+  await client.set(key, JSON.stringify(value), { EX: expired, NX: true });
 };
 
 const getCache = async (key) => {
@@ -22,17 +19,40 @@ const getCache = async (key) => {
   return result ? JSON.parse(result) : null;
 };
 
-const clearCache = async (key) => {
-  await client.del(key);
+const hSetCache = async (key, value) => {
+  await client.HSET(key, JSON.stringify(value));
 };
 
-const updateCache = async (key, value) => {
-  await client.set(key, JSON.stringify(value), { EX: 1800 }); // Update value with 30 minutes expiration
+const scanAndDelete = async () => {
+  let cursor = "0";
+  try {
+    const scanReply = await client.sendCommand([
+      "SCAN",
+      cursor,
+      "MATCH",
+      "editorList:limit:10000*",
+      "COUNT",
+      "100",
+    ]);
+    cursor = scanReply[0];
+    console.log(cursor);
+    const keys = scanReply[1];
+
+    if (keys.length > 0) {
+      const delReply = await client.sendCommand(["DEL", ...keys]);
+      console.log(`Deleted ${delReply} keys.`);
+    }
+
+    if (cursor !== "0") {
+      scanAndDelete();
+    }
+  } catch (err) {
+    console.log(err);
+  }
 };
 
 module.exports = {
   setCache,
   getCache,
-  clearCache,
-  updateCache,
+  scanAndDelete,
 };

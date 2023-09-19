@@ -18,7 +18,7 @@ const requestIp = require("request-ip");
 const Log = require("../model/changeLog");
 const logChanges = require("../logChanges");
 const verifyUser = require("../verifyUser");
-const { setCache, getCache } = require("../redisCache");
+const { setCache, getCache, scanAndDelete } = require("../redisCache");
 require("dotenv").config();
 
 const editorRouter = new express.Router();
@@ -844,7 +844,11 @@ editorRouter.get("/editor", verifyUser, parseQuery, async (req, res) => {
     let end;
     // Try to get data from cache
     const generateCacheKey = (query) => {
-      return "editors:" + JSON.stringify(query);
+      let objectTypeString = "editorList";
+      for (const [key, value] of Object.entries(query)) {
+        objectTypeString += `:${key}:${value}`;
+      }
+      return objectTypeString;
     };
     const cacheKey = generateCacheKey(req.query);
 
@@ -1045,7 +1049,7 @@ editorRouter.get("/editor", verifyUser, parseQuery, async (req, res) => {
       currentPage: pageNumber,
     };
 
-    setCache(cacheKey, result, 5);
+    setCache(cacheKey, result, 60 * 60 * 12);
     res.status(200).send(result);
   } catch (err) {
     res.status(500).send({ message: err.message });
@@ -1709,6 +1713,7 @@ editorRouter.patch(
           relatedId: editorId,
         });
         await newIp.save();
+        await scanAndDelete();
 
         res.status(201).json({
           message: `Editor number:${article.serialNumber} page view count incremented`,
@@ -1927,6 +1932,7 @@ editorRouter.patch("/editor/checkScheduleEditors", async (req, res) => {
         message: "No scheduled article need to update status",
       });
     } else {
+      await scanAndDelete();
       res.status(200).send({
         message: `Successfully updated the following ids: ${updatedIds.join(
           ", "
@@ -1963,8 +1969,6 @@ editorRouter.patch(
       scheduledAt,
       draft,
     } = res;
-    console.log(req.files.contentImagePath);
-    console.log(req.files.homeImagePath);
     const contentImagePath =
       req.files.contentImagePath && req.files.contentImagePath[0];
     const homeImagePath = req.files.homeImagePath && req.files.homeImagePath[0];
@@ -2019,6 +2023,7 @@ editorRouter.patch(
         true
       );
       await res.editor.save();
+      await scanAndDelete();
       res.status(201).send({ message: "Editor update successfully" });
     } catch (err) {
       res.status(400).send({ message: err.message });
@@ -2155,7 +2160,7 @@ editorRouter.post(
           "editor",
           req.session.user
         );
-
+        await scanAndDelete();
         res.status(201).json({
           ...updateEditor._doc, // Spread operator to include all properties of newEditor
           sitemapUrl: newEditorSitemap.url,
@@ -2327,7 +2332,7 @@ editorRouter.delete(
       if (deleteEditor.deletedCount !== deleteSitemap.deletedCount) {
         return res.status(404).json({ message: "No matching sitemap found" });
       }
-
+      await scanAndDelete();
       res.status(200).json({ message: "Delete editor successful!" });
     } catch (e) {
       res.status(500).send({ message: e.message });
