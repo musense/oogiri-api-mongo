@@ -179,11 +179,11 @@ async function processImage(file, originalFilename) {
       extension;
 
     fs.writeFileSync(
-      `${BANNER_CONTENT_PATH}/${newFilename}`,
+      `${LOCAL_DOMAIN}${BANNER_CONTENT_PATH}/${newFilename}`,
       compressedImage.data
     );
     fs.writeFileSync(
-      `${BANNER_HOMEPAGE_PATH}/${newFilename}`,
+      `${LOCAL_DOMAIN}${BANNER_HOMEPAGE_PATH}/${newFilename}`,
       compressedImage2.data
     );
     return newFilename;
