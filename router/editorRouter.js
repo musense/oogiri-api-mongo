@@ -998,12 +998,12 @@ editorRouter.get("/editor", verifyUser, parseQuery, async (req, res) => {
     const updateEditor = await Promise.all(
       editors.map(async (editor) => {
         const tagIds = editor.tags.map((tag) => tag._id);
+        const categoryID = editor.categories ? editor.categories._id : null;
 
         const [categorySitemap, tagSitemaps] = await Promise.all([
-          Sitemap.findOne({
-            originalID: editor.categories._id,
-            type: "category",
-          }),
+          categoryID
+            ? Sitemap.findOne({ originalID: categoryID, type: "category" })
+            : null,
           Sitemap.find({ originalID: { $in: tagIds }, type: "tag" }),
         ]);
 
