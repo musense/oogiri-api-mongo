@@ -998,6 +998,7 @@ editorRouter.get("/editor", verifyUser, parseQuery, async (req, res) => {
     const updateEditor = await Promise.all(
       editors.map(async (editor) => {
         const tagIds = editor.tags.map((tag) => tag._id);
+        //JP站沒有分類
         const categoryID = editor.categories ? editor.categories._id : null;
 
         const [categorySitemap, tagSitemaps] = await Promise.all([
