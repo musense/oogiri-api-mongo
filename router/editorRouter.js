@@ -997,7 +997,7 @@ editorRouter.get("/editor", verifyUser, parseQuery, async (req, res) => {
 
     const updateEditor = await Promise.all(
       editors.map(async (editor) => {
-        const tagIds = editor.tags.map((tag) => tag._id);
+        const tagIds = editor.tags ? editor.tags.map((tag) => tag._id) : [];
         //JP站沒有分類
         const categoryID = editor.categories ? editor.categories._id : null;
 
@@ -1024,10 +1024,12 @@ editorRouter.get("/editor", verifyUser, parseQuery, async (req, res) => {
           };
         }
 
-        editor.tags = editor.tags.map((tag) => ({
-          ...tag,
-          sitemapUrl: tagSitemapMap.get(tag._id.toString()),
-        }));
+        editor.tags = editor.tags
+          ? editor.tags.map((tag) => ({
+              ...tag,
+              sitemapUrl: tagSitemapMap.get(tag._id.toString()),
+            }))
+          : [];
 
         const editorSitemap = await Sitemap.findOne({
           originalID: editor._id,
