@@ -482,7 +482,13 @@ bannerRouter.patch(
     if (contentFilename !== undefined) {
       if (homeImagePath) {
         res.banner.homeImagePath = homeFilename;
-        res.banner.contentImagePath = contentFilename;
+        const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+        const match = contentFilename.match(regex);
+
+        if (match && match[1]) {
+          const youtubeUrl = match[1];
+          res.banner.contentImagePath = youtubeUrl;
+        }
       } else {
         res.banner.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/banner/homepage/${contentFilename}`;
         res.banner.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/banner/content/${contentFilename}`;
@@ -582,7 +588,13 @@ bannerRouter.post(
             : null;
           if (homeImagePath && homeFilename.startsWith("http")) {
             newBannerData.homeImagePath = homeFilename;
-            newBannerData.contentImagePath = contentFilename;
+            const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+            const match = contentFilename.match(regex);
+
+            if (match && match[1]) {
+              const youtubeUrl = match[1];
+              newBannerData.contentImagePath = youtubeUrl;
+            }
           } else {
             newBannerData.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/banner/homepage/${contentFilename}`;
             newBannerData.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/banner/content/${contentFilename}`;

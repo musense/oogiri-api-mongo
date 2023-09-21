@@ -34,6 +34,7 @@ const domain = process.env.DOMAIN;
 const LOCAL_DOMAIN = process.env.LOCAL_DOMAIN;
 const IMG_CONTENT_PATH = process.env.IMG_CONTENT_PATH;
 const IMG_HOMEPAGE_PATH = process.env.IMG_HOMEPAGE_PATH;
+const DBLOG_FILE_PATH = process.env.DBLOG_FILE_PATH;
 
 function getIpInfo(req, res, next) {
   const clientIp = requestIp.getClientIp(req);
@@ -1987,7 +1988,13 @@ editorRouter.patch(
     if (contentFilename !== undefined) {
       if (homeImagePath) {
         res.editor.homeImagePath = homeFilename;
-        res.editor.contentImagePath = contentFilename;
+        const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+        const match = contentFilename.match(regex);
+
+        if (match && match[1]) {
+          const youtubeUrl = match[1];
+          res.editor.contentImagePath = youtubeUrl;
+        }
       } else {
         res.editor.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/homepage/${contentFilename}`;
         res.editor.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/content/${contentFilename}`;
@@ -2120,7 +2127,13 @@ editorRouter.post(
             : null;
           if (homeImagePath && homeFilename.startsWith("http")) {
             editorData.homeImagePath = homeFilename;
-            editorData.contentImagePath = contentFilename;
+            const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+            const match = contentFilename.match(regex);
+
+            if (match && match[1]) {
+              const youtubeUrl = match[1];
+              editorData.contentImagePath = youtubeUrl;
+            }
           } else {
             editorData.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/homepage/${contentFilename}`;
             editorData.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/content/${contentFilename}`;
@@ -2225,12 +2238,6 @@ editorRouter.post(
         hidden,
       };
 
-      // if (newFilename) {
-      //   // editorData.homeImagePath = `/home/saved_image/homepage/${newFilename}`;
-      //   editorData.homeImagePath = `http://10.88.0.106:3000/images/homepage/${newFilename}`;
-      //   // editorData.contentImagePath = `/home/saved_image/content/${newFilename}`;
-      //   editorData.contentImagePath = `http://10.88.0.106:3000/images/content/${newFilename}`;
-      // }
       if (contentImagePath === undefined && homeImagePath === undefined) {
         editorData.contentImagePath = null;
         editorData.homeImagePath = null;
@@ -2242,11 +2249,15 @@ editorRouter.post(
         const homeFilename = homeImagePath
           ? await processImage(homeImagePath, homeImagePath.originalname)
           : null;
-        console.log(contentFilename);
-        console.log(homeFilename);
         if (homeImagePath && homeFilename.startsWith("http")) {
           editorData.homeImagePath = homeFilename;
-          editorData.contentImagePath = contentFilename;
+          const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+          const match = contentFilename.match(regex);
+
+          if (match && match[1]) {
+            const youtubeUrl = match[1];
+            editorData.contentImagePath = youtubeUrl;
+          }
         } else {
           // const newHomeUrl = copyFileAndGenerateNewUrl(homeFilename);
           // const newContentUrl = copyFileAndGenerateNewUrl(contentFilename);
@@ -2255,22 +2266,6 @@ editorRouter.post(
           // editorData.contentImagePath = newContentUrl;
         }
       }
-
-      // if (homeImagePath) {
-      //   //如果是修改原有文章
-      //   if (contentFilename.startsWith("http")) {
-      //     const newHomeUrl = copyFileAndGenerateNewUrl(homeFilename);
-      //     const newContentUrl = copyFileAndGenerateNewUrl(contentFilename);
-      //     editorData.homeImagePath = newHomeUrl;
-      //     editorData.contentImagePath = newContentUrl;
-      //   } else {
-      //     editorData.homeImagePath = homeFilename;
-      //     editorData.contentImagePath = contentFilename;
-      //   }
-      // } else {
-      //   editorData.homeImagePath = `${LOCAL_DOMAIN}saved_image/homepage/${contentFilename}`;
-      //   editorData.contentImagePath = `${LOCAL_DOMAIN}saved_image/content/${contentFilename}`;
-      // }
 
       const newTempEditor = new tempEditor(editorData);
       await newTempEditor.save();
@@ -2386,7 +2381,7 @@ editorRouter.delete("/editor/cleanupIps", async (req, res) => {
       res.json({ message: "No data need to write" });
     } else if (oldLogs.length > 0) {
       // Write logs to a file
-      const filePath = path.join(DBLOG_FILE_PATH, "ipLogs.json");
+      const filePath = path.join(DBLOG_FILE_PATH, "ipLogs_jp.json");
       fs.appendFileSync(filePath, JSON.stringify(oldLogs, null, 2));
 
       // Find and remove all IPs that were created more than one hour ago
