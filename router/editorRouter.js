@@ -21,6 +21,10 @@ const Log = require("../model/changeLog");
 const logChanges = require("../logChanges");
 const verifyUser = require("../verifyUser");
 const { setCache, getCache, scanAndDelete } = require("../redisCache");
+const { pipeline } = require("stream");
+const { promisify } = require("util");
+const pipelineAsync = promisify(pipeline);
+const { Readable } = require("stream");
 require("dotenv").config();
 
 const editorRouter = new express.Router();
@@ -36,6 +40,7 @@ const domain = process.env.DOMAIN;
 const LOCAL_DOMAIN = process.env.LOCAL_DOMAIN;
 const IMG_CONTENT_PATH = process.env.IMG_CONTENT_PATH;
 const IMG_HOMEPAGE_PATH = process.env.IMG_HOMEPAGE_PATH;
+const DBLOG_FILE_PATH = process.env.DBLOG_FILE_PATH;
 
 function getIpInfo(req, res, next) {
   const clientIp = requestIp.getClientIp(req);
@@ -2538,31 +2543,85 @@ editorRouter.delete("/tempEditor", verifyUser, async (req, res) => {
 });
 
 editorRouter.delete("/editor/cleanupIps", async (req, res) => {
+  const handleErrors = (res, error) => {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  };
+
+  const readAndValidateJSONFile = async (filePath) => {
+    return new Promise(async (resolve, reject) => {
+      let rawData = "";
+      const readStream = fs.createReadStream(filePath, { encoding: "utf8" });
+      readStream.on("data", (chunk) => (rawData += chunk));
+      readStream.on("end", () => {
+        try {
+          const jsonData = JSON.parse(rawData);
+          resolve(jsonData);
+        } catch (err) {
+          const splitContent = rawData.split("][");
+          const reformattedContent = "[" + splitContent.join("],[") + "]";
+          resolve(JSON.parse(reformattedContent));
+        }
+      });
+      readStream.on("error", reject);
+    });
+  };
+
+  const writeJSONFile = async (filePath, data) => {
+    const writeStream = fs.createWriteStream(filePath, { encoding: "utf8" });
+    const readableStream = Readable.from([JSON.stringify(data, null, 2)], {
+      encoding: "utf8",
+    });
+
+    try {
+      await pipelineAsync(readableStream, writeStream);
+    } catch (err) {
+      console.error("Pipeline failed:", err);
+    }
+  };
+
   try {
-    // Get the current time minus one hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const oldLogs = await Ips.find({ createdAt: { $lt: oneHourAgo } }).select(
       "-_id sourceIp relatedId createdAt"
     );
-    if (oldLogs.length === 0) {
-      res.json({ message: "No data need to write" });
-    } else if (oldLogs.length > 0) {
-      // Write logs to a file
-      const filePath = path.join(DBLOG_FILE_PATH, "ipLogs.json");
-      fs.appendFileSync(filePath, JSON.stringify(oldLogs, null, 2));
 
-      // Find and remove all IPs that were created more than one hour ago
-      await Ips.deleteMany({
-        createdAt: { $lt: oneHourAgo },
-      });
+    const filePath = path.join(DBLOG_FILE_PATH, "ipLogs.json");
+    const outputFilePath = path.join(DBLOG_FILE_PATH, "no_duplicate_IP.json");
 
-      // Return the result of the operation
-      res.status(200).json({
-        message: `Deleted ${oldLogs.length} IP(s) that were created more than one hour ago.`,
-      });
+    let existingData = [];
+    if (fs.existsSync(filePath)) {
+      existingData = await readAndValidateJSONFile(filePath);
     }
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const combinedData = existingData.concat(oldLogs);
+    console.log(combinedData);
+
+    await writeJSONFile(filePath, combinedData);
+
+    // Load existing no_duplicate_IP.json data if exists
+    let uniqueData = [];
+    if (fs.existsSync(outputFilePath)) {
+      uniqueData = await readAndValidateJSONFile(outputFilePath);
+    }
+
+    const uniqueSourceIps = new Set(uniqueData.map((log) => log.sourceIp));
+
+    // Filter out duplicate sourceIps from oldLogs
+    const uniqueOldLogs = oldLogs.filter(
+      (log) => !uniqueSourceIps.has(log.sourceIp)
+    );
+    console.log(uniqueOldLogs);
+    // Write uniqueOldLogs to no_duplicate_IP.json
+    const combinedUniqueData = uniqueData.concat(uniqueOldLogs);
+    await writeJSONFile(outputFilePath, combinedUniqueData);
+
+    await Ips.deleteMany({ createdAt: { $lt: oneHourAgo } });
+
+    res.status(200).json({
+      message: `Deleted ${oldLogs.length} IP(s) that were created more than one hour ago.`,
+    });
+  } catch (error) {
+    handleErrors(res, error);
   }
 });
 
