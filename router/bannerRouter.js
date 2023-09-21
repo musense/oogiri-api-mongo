@@ -23,7 +23,6 @@ async function getMaxSerialNumber() {
 }
 
 function parseRequestBody(req, res, next) {
-  console.log(req.body);
   const {
     name,
     sort,
