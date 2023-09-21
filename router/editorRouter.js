@@ -2133,7 +2133,13 @@ editorRouter.patch(
     if (contentFilename !== undefined) {
       if (homeImagePath) {
         res.editor.homeImagePath = homeFilename;
-        res.editor.contentImagePath = contentFilename;
+        const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+        const match = contentFilename.match(regex);
+
+        if (match && match[1]) {
+          const youtubeUrl = match[1];
+          res.editor.contentImagePath = youtubeUrl;
+        }
       } else {
         res.editor.homeImagePath = `${LOCAL_DOMAIN}saved_image/homepage/${contentFilename}`;
         res.editor.contentImagePath = `${LOCAL_DOMAIN}saved_image/content/${contentFilename}`;
@@ -2266,7 +2272,13 @@ editorRouter.post(
             : null;
           if (homeImagePath && homeFilename.startsWith("http")) {
             editorData.homeImagePath = homeFilename;
-            editorData.contentImagePath = contentFilename;
+            const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+            const match = contentFilename.match(regex);
+
+            if (match && match[1]) {
+              const youtubeUrl = match[1];
+              editorData.contentImagePath = youtubeUrl;
+            }
           } else {
             editorData.homeImagePath = `${LOCAL_DOMAIN}saved_image/homepage/${contentFilename}`;
             editorData.contentImagePath = `${LOCAL_DOMAIN}saved_image/content/${contentFilename}`;
@@ -2388,11 +2400,15 @@ editorRouter.post(
         const homeFilename = homeImagePath
           ? await processImage(homeImagePath, homeImagePath.originalname)
           : null;
-        console.log(contentFilename);
-        console.log(homeFilename);
         if (homeImagePath && homeFilename.startsWith("http")) {
           editorData.homeImagePath = homeFilename;
-          editorData.contentImagePath = contentFilename;
+          const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+          const match = contentFilename.match(regex);
+
+          if (match && match[1]) {
+            const youtubeUrl = match[1];
+            editorData.contentImagePath = youtubeUrl;
+          }
         } else {
           // const newHomeUrl = copyFileAndGenerateNewUrl(homeFilename);
           // const newContentUrl = copyFileAndGenerateNewUrl(contentFilename);

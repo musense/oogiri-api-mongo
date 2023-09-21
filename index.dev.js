@@ -48,7 +48,7 @@ app.use(
   })
 );
 
-const swaggerDocument = YAML.load("./index.yaml");
+const swaggerDocument = YAML.load("./index.yml");
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 const corsOptions = {
@@ -75,7 +75,7 @@ app.use(express.static(__dirname));
 
 app.use(express.json());
 app.use(cors(corsOptions));
-
+app.disable("x-powered-by");
 app.use(function (req, res, next) {
   const allowedOrigins = [
     "http://localhost",

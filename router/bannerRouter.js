@@ -495,7 +495,7 @@ bannerRouter.patch(
       if (homeImagePath) {
         res.banner.homeImagePath = homeFilename;
         const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
-        const match = iframeString.match(regex);
+        const match = contentFilename.match(regex);
 
         if (match && match[1]) {
           const youtubeUrl = match[1];
@@ -601,7 +601,7 @@ bannerRouter.post(
           if (homeImagePath && homeFilename.startsWith("http")) {
             newBannerData.homeImagePath = homeFilename;
             const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
-            const match = iframeString.match(regex);
+            const match = contentFilename.match(regex);
 
             if (match && match[1]) {
               const youtubeUrl = match[1];
