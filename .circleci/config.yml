@@ -6,20 +6,23 @@ jobs:
       - image: circleci/node:16
     steps:
       - checkout
-      - run: npm install
+      - run: yarn install
 
   deploy:
-    machine:
-      enabled: true
+    docker:
+      - image: google/cloud-sdk
     steps:
-      - add_ssh_keys:
-          fingerprints:
-            - "SHA256:75xMU49CcuMoEFGclMVApuRy4BHcY+brhCLc7cYFZwo"
+      - run:
+          name: Authenticate gcloud
+          command: |
+            echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
+            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
+            gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
       - run:
           name: Deploy to GCP Compute Engine
           command: |
-            ssh -v -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no dino_wu@34.81.88.251 "cd /home/dino_wu/oogiri-api-mongo/ && sudo git pull && sudo npm install && sudo pm2 restart 4 && sudo pm2 restart 5"
-            echo "Deploy success"
+            ssh -v -o StrictHostKeyChecking=no dino_wu@34.81.88.251 "cd /home/dino_wu/oogiri-api-mongo/ && git pull && yarn install && pm2 restart 4 && pm2 restart 5"
+
 workflows:
   version: 2
   build-and-deploy:
