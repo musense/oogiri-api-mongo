@@ -18,7 +18,7 @@ jobs:
       - run:
           name: Deploy to GCP Compute Engine
           command: |
-            ssh -i ~/.ssh/id_rsa dino_wu@34.81.88.251 StrictHostKeyChecking=no "cd /home/dino_wu/oogiri-api-mongo/ && sudo git pull && sudo npm install && sudo pm2 restart 4 && sudo pm2 restart 5"
+            ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no dino_wu@34.81.88.251 "cd /home/dino_wu/oogiri-api-mongo/ && sudo git pull && sudo npm install && sudo pm2 restart 4 && sudo pm2 restart 5"
             echo "Deploy success"
 workflows:
   version: 2
