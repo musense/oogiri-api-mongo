@@ -21,7 +21,7 @@ jobs:
       - run:
           name: Deploy to GCP Compute Engine
           command: |
-            gcloud compute ssh --quiet --zone "asia-east1-b" "uat-apidb" --project "uat-environment-387601" --command="cd /home/dino_wu/oogiri-api-mongo/ && git pull && yarn install && pm2 restart 4 && pm2 restart 5"
+            gcloud compute ssh --quiet dino_wu@34.81.88.251 --zone "asia-east1-b" "uat-apidb" --project "uat-environment-387601" --command="cd /home/dino_wu/oogiri-api-mongo/ && git pull && yarn install && pm2 restart 4 && pm2 restart 5"
 
 workflows:
   version: 2
