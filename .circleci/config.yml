@@ -13,6 +13,11 @@ jobs:
       - image: google/cloud-sdk
     steps:
       - run:
+          name: Setup SSH Keys
+          command: |
+            echo -e "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+      - run:
           name: Authenticate gcloud
           command: |
             echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
