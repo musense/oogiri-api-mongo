@@ -21,7 +21,7 @@ jobs:
       - run:
           name: Deploy to GCP Compute Engine
           command: |
-            gcloud compute ssh --quiet "dino_wu@uat-apidb" --zone="asia-east1-b" --project="uat-environment-387601" --ssh-key-file=~/.ssh/id_rsa --command="sudo -i && cd /home/dino_wu/oogiri-api-mongo/ && git pull && npm install && sudo pm2 restart 4 && sudo pm2 restart 5" -- -l dino_wu
+            gcloud compute ssh --quiet "dino_wu@uat-apidb" --zone="asia-east1-b" --project="uat-environment-387601" --ssh-key-file=~/.ssh/id_rsa --command="cd /home/dino_wu/oogiri-api-mongo/ && git pull && npm install && sudo pm2 restart 4 && sudo pm2 restart 5" -- -l dino_wu
 
 workflows:
   version: 2
