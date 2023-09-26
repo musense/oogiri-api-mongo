@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: circleci/node:16
+      - image: cimg/node:16.20
     steps:
       - checkout
       - run: npm install
@@ -24,7 +24,6 @@ jobs:
             gcloud compute ssh --quiet "dino_wu@uat-apidb" --zone="asia-east1-b" --project="uat-environment-387601" --ssh-key-file=~/.ssh/id_rsa --command="cd /home/dino_wu/oogiri-api-mongo/ && git pull && npm install && sudo pm2 restart 4 && sudo pm2 restart 5" -- -l dino_wu
 
 workflows:
-  version: 2
   build-and-deploy:
     jobs:
       - build
