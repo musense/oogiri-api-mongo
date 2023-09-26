@@ -12,13 +12,13 @@ jobs:
     docker:
       - image: google/cloud-sdk
     steps:
-      - run:
-          name: Setup SSH Keys
-          command: |
-            mkdir -p ~/.ssh
-            echo -e "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-            echo -e "$SSH_PUBLIC_KEY" > ~/.ssh/id_rsa.pub
-            chmod 600 ~/.ssh/id_rsa
+      # - run:
+      #     name: Setup SSH Keys
+      #     command: |
+      #       mkdir -p ~/.ssh
+      #       echo -e "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+      #       echo -e "$SSH_PUBLIC_KEY" > ~/.ssh/id_rsa.pub
+      #       chmod 600 ~/.ssh/id_rsa
       - run:
           name: Authenticate gcloud
           command: |
