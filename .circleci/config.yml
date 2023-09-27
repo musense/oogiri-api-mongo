@@ -9,26 +9,16 @@ jobs:
       - run: npm install
 
   deploy:
-    docker:
-      - image: google/cloud-sdk
+    machine:
+      enabled: true
     steps:
-      # - run:
-      #     name: Setup SSH Keys
-      #     command: |
-      #       mkdir -p ~/.ssh
-      #       echo -e "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-      #       echo -e "$SSH_PUBLIC_KEY" > ~/.ssh/id_rsa.pub
-      #       chmod 600 ~/.ssh/id_rsa
-      - run:
-          name: Authenticate gcloud
-          command: |
-            echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
-            gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
-            gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+      - add_ssh_keys:
+          fingerprints:
+            - $VM_SSH_FINGERPRINT
       - run:
           name: Deploy to GCP Compute Engine
           command: |
-            gcloud compute ssh --quiet "dino_wu@uat-apidb" --zone="asia-east1-b" --project="uat-environment-387601" --ssh-key-file=~/.ssh/id_rsa --command="cd /home/dino_wu/oogiri-api-mongo/ && git pull && npm install && sudo pm2 restart 4 && sudo pm2 restart 5" -- -l dino_wu
+            ssh -o StrictHostKeyChecking=no $VM_USER@$VM_IP "cd /home/dino_wu/oogiri-api-mongo/ && git pull && npm install && sudo pm2 restart 4 && sudo pm2 restart 5"
 
 workflows:
   build-and-deploy:

@@ -1535,8 +1535,7 @@ editorRouter.get(
         .select(
           "title tags publishedAt hidden homeImagePath categories altText"
         )
-        .populate({ path: "tags", select: "name" })
-        .populate({ path: "categories", select: "name" });
+        .populate({ path: "tags", select: "name" });
       relatedArticles.forEach((article) => {
         let commonTagsCount = 0;
         article.tags.forEach((tag) => {
