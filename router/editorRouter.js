@@ -454,7 +454,7 @@ async function getNewPopularEditors() {
     }
 
     const updatePopularEditors = await Promise.all(
-      popularEditors.map(async (editor) => {
+      finalEditors.map(async (editor) => {
         const sitemapUrl = await Sitemap.findOne({
           originalID: editor._id,
           type: "editor",
