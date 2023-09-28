@@ -1349,7 +1349,10 @@ editorRouter.get(
   verifyUser,
   async (req, res) => {
     try {
-      const topSortingData = await Editor.find({ topSorting: { $ne: null } })
+      const topSortingData = await Editor.find({
+        topSorting: { $ne: null },
+        status: "已發布",
+      })
         .sort({ topSorting: 1 })
         .limit(2)
         .select(
@@ -1359,6 +1362,7 @@ editorRouter.get(
 
       // 2. publishedAt資料依照時間新到舊排列，取前四筆
       const publishedAtData = await Editor.find({
+        status: "已發布",
         publishedAt: { $ne: null },
       })
         .sort({ publishedAt: -1 })
