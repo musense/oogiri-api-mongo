@@ -1987,12 +1987,17 @@ editorRouter.patch(
     if (contentFilename !== undefined) {
       if (homeImagePath) {
         res.editor.homeImagePath = homeFilename;
-        const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
-        const match = contentFilename.match(regex);
+        if (contentFilename === "") {
+          res.editor.contentImagePath = contentFilename;
+        } else {
+          const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+          const match = contentFilename.match(regex);
 
-        if (match && match[1]) {
-          const youtubeUrl = match[1];
-          res.editor.contentImagePath = youtubeUrl;
+          if (match && match[1]) {
+            const youtubeUrl = match[1];
+            console.log(youtubeUrl);
+            res.editor.contentImagePath = youtubeUrl;
+          }
         }
       } else {
         res.editor.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/homepage/${contentFilename}`;
