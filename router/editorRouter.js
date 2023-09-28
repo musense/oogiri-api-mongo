@@ -448,7 +448,9 @@ async function getNewPopularEditors() {
       if (sortingMap.has(i + 1)) {
         finalEditors.push(sortingMap.get(i + 1));
       } else {
-        finalEditors.push(popularEditors[j]);
+        if (popularEditors[j]) {
+          finalEditors.push(popularEditors[j]);
+        }
         j++;
       }
     }
