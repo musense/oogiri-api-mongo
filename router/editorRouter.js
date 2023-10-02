@@ -1205,7 +1205,10 @@ editorRouter.get(
 
 editorRouter.get("/editor/frontEnd/recommend", verifyUser, async (req, res) => {
   try {
-    const recommendList = await Editor.find({ recommendSorting: { $ne: null } })
+    const recommendList = await Editor.find({
+      recommendSorting: { $ne: null },
+      status: "已發布",
+    })
       .limit(8)
       .select(
         "serialNumber title htmlContent publishedAt recommendSorting homeImagePath"

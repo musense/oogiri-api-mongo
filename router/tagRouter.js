@@ -390,6 +390,7 @@ tagRouter.get(
       // console.log(tagData);
       const editorsInTag = await Editor.find({
         tags: tagData._id,
+        status: "已發布",
       })
         .select("-content -createdAt")
         .populate({ path: "categories", select: "name" })
