@@ -19,11 +19,14 @@ const PORT = process.env.PORT || 3000;
 
 const ssl = https.createServer(
   {
-    key: fs.readFileSync("/etc/letsencrypt/live/bd.oogiriinfo.tw/privkey.pem", {
-      encoding: "utf8",
-    }),
+    key: fs.readFileSync(
+      "/etc/letsencrypt/live/bd.oogiriinfo.com/privkey.pem",
+      {
+        encoding: "utf8",
+      }
+    ),
     cert: fs.readFileSync(
-      "/etc/letsencrypt/live/bd.oogiriinfo.tw/fullchain.pem",
+      "/etc/letsencrypt/live/bd.oogiriinfo.com/fullchain.pem",
       {
         encoding: "utf8",
       }
