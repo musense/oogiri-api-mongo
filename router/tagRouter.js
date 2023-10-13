@@ -77,8 +77,6 @@ async function updateSorting(req, res, method, popular, next) {
   }
   let existingTagId = null;
   let targetTag;
-  console.log(desiredSorting);
-  console.log(typeof desiredSorting);
 
   // if (!isPositiveInteger(parseInt(desiredSorting, 10))) {
   //   throw new Error("Invalid sorting number. It must be a positive integer.");

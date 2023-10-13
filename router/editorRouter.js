@@ -2004,7 +2004,6 @@ editorRouter.patch(
 
           if (match && match[1]) {
             const youtubeUrl = match[1];
-            console.log(youtubeUrl);
             res.editor.contentImagePath = youtubeUrl;
           }
         }

@@ -5,7 +5,7 @@ require("dotenv").config();
 const LOCAL_DOMAIN = process.env.LOCAL_DOMAIN;
 
 const job = new CronJob({
-  cronTime: "0 30,0 * * * 1-5",
+  cronTime: "0 5,10,15,20,25,30,35,40,45,50,55,0 * * * *",
   onTick: async function () {
     try {
       const response1 = await axios.patch(
@@ -25,7 +25,7 @@ const job = new CronJob({
   timezone: "Asia/Taipei",
 });
 const job2 = new CronJob({
-  cronTime: "0 0 0 * * 1-5",
+  cronTime: "0 0 0 1 * *",
   onTick: async function () {
     try {
       const response2 = await axios.delete(
