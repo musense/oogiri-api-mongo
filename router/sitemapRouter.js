@@ -21,16 +21,14 @@ sitemapRouter.get("/checkUrl/:url", async function (req, res) {
     let targetData;
     switch (findData.type) {
       case "editor":
-        targetData = await Editor.findOne({ _id: findData.originalID })
-          .populate({ path: "tags", select: "name" })
-          .populate({ path: "categories", select: "name" });
-        const tagIds = targetData.tags.map((tag) => tag._id);
+        targetData = await Editor.findOne({
+          _id: findData.originalID,
+        }).populate({ path: "tags", select: "name" });
+        const tagIds = targetData.tags
+          ? targetData.tags.map((tag) => tag._id)
+          : [];
 
-        const [categorySitemap, tagSitemaps] = await Promise.all([
-          Sitemap.findOne({
-            originalID: targetData.categories._id,
-            type: "category",
-          }),
+        const [tagSitemaps] = await Promise.all([
           Sitemap.find({ originalID: { $in: tagIds }, type: "tag" }),
         ]);
 
@@ -43,17 +41,12 @@ sitemapRouter.get("/checkUrl/:url", async function (req, res) {
 
         targetData = targetData.toObject();
 
-        if (categorySitemap) {
-          targetData.categories = {
-            ...targetData.categories,
-            sitemapUrl: categorySitemap.url,
-          };
-        }
-
-        targetData.tags = targetData.tags.map((tag) => ({
-          ...tag,
-          sitemapUrl: tagSitemapMap.get(tag._id.toString()),
-        }));
+        targetData.tags = targetData.tags
+          ? targetData.tags.map((tag) => ({
+              ...tag,
+              sitemapUrl: tagSitemapMap.get(tag._id.toString()),
+            }))
+          : [];
 
         const editorSitemap = await Sitemap.findOne({
           originalID: targetData._id,

@@ -209,7 +209,6 @@ async function parseCategories(req, res, next) {
     res.status(400).send({ message: error.message });
   }
 }
-
 async function parseTags(req, res, next) {
   try {
     let tagJsonString = req.body.tags;
@@ -467,7 +466,6 @@ async function getNewPopularEditors() {
     }
     const updatePopularEditors = await Promise.all(
       finalEditors.map(async (editor) => {
-        console.log(editor._id);
         const sitemapUrl = await Sitemap.findOne({
           originalID: editor._id,
           type: "editor",
@@ -1251,7 +1249,10 @@ editorRouter.get(
 );
 editorRouter.get("/editor/frontEnd/recommend", verifyUser, async (req, res) => {
   try {
-    const recommendList = await Editor.find({ recommendSorting: { $ne: null } })
+    const recommendList = await Editor.find({
+      recommendSorting: { $ne: null },
+      status: "已發布",
+    })
       .limit(8)
       .select(
         "serialNumber title htmlContent publishedAt recommendSorting homeImagePath"
@@ -1444,7 +1445,10 @@ editorRouter.get(
   verifyUser,
   async (req, res) => {
     try {
-      const topSortingData = await Editor.find({ topSorting: { $ne: null } })
+      const topSortingData = await Editor.find({
+        topSorting: { $ne: null },
+        status: "已發布",
+      })
         .sort({ topSorting: 1 })
         .limit(2)
         .select(
@@ -1454,6 +1458,7 @@ editorRouter.get(
 
       // 2. publishedAt資料依照時間新到舊排列，取前四筆
       const publishedAtData = await Editor.find({
+        status: "已發布",
         publishedAt: { $ne: null },
       })
         .sort({ publishedAt: -1 })
@@ -1683,8 +1688,7 @@ editorRouter.get(
         .select(
           "title tags publishedAt hidden homeImagePath categories altText"
         )
-        .populate({ path: "tags", select: "name" })
-        .populate({ path: "categories", select: "name" });
+        .populate({ path: "tags", select: "name" });
       relatedArticles.forEach((article) => {
         let commonTagsCount = 0;
         article.tags.forEach((tag) => {
@@ -2121,8 +2125,7 @@ editorRouter.patch(
       scheduledAt,
       draft,
     } = res;
-    console.log(req.files.contentImagePath);
-    console.log(req.files.homeImagePath);
+
     const contentImagePath =
       req.files.contentImagePath && req.files.contentImagePath[0];
     const homeImagePath = req.files.homeImagePath && req.files.homeImagePath[0];
@@ -2138,12 +2141,17 @@ editorRouter.patch(
     if (contentFilename !== undefined) {
       if (homeImagePath) {
         res.editor.homeImagePath = homeFilename;
-        const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
-        const match = contentFilename.match(regex);
+        if (contentFilename === "") {
+          res.editor.contentImagePath = contentFilename;
+        } else {
+          const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+          const match = contentFilename.match(regex);
 
-        if (match && match[1]) {
-          const youtubeUrl = match[1];
-          res.editor.contentImagePath = youtubeUrl;
+          if (match && match[1]) {
+            const youtubeUrl = match[1];
+            console.log(youtubeUrl);
+            res.editor.contentImagePath = youtubeUrl;
+          }
         }
       } else {
         res.editor.homeImagePath = `${LOCAL_DOMAIN}saved_image/homepage/${contentFilename}`;

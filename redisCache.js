@@ -1,6 +1,7 @@
 // redisCache.js
 const redis = require("redis");
-const client = redis.createClient({ host: "127.0.0.1", port: 6379 });
+// const client = redis.createClient({ host: "127.0.0.1", port: 6379 });
+const client = redis.createClient({ host: "redis", port: 6379 });
 
 client.on("error", (error) => {
   console.error(error);
@@ -36,7 +37,6 @@ const scanAndDelete = async () => {
       "100",
     ]);
     cursor = scanReply[0];
-    console.log(cursor);
     const keys = scanReply[1];
 
     if (keys.length > 0) {

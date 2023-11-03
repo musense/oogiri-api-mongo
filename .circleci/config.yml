@@ -1,0 +1,33 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: circleci/node:16
+    steps:
+      - checkout
+      - run: yarn install
+
+  deploy:
+    machine:
+      enabled: true
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:8yBBkQCSEN06oKHVOHMxRtZOMQs/Br1Z+PdtXRGftrQ"
+      - run:
+          name: Deploy to GCP Compute Engine
+          command: |
+            ssh -o StrictHostKeyChecking=no dino_wu@34.81.88.251 "sudo -i && cd /home/dino_wu/oogiri-frontpage-next && git pull && rm -r .next && yarn install && yarn build:uat:local && pm2 restart 14"
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build
+      - deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: dev
