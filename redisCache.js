@@ -35,7 +35,6 @@ const scanAndDelete = async () => {
       "100",
     ]);
     cursor = scanReply[0];
-    console.log(cursor);
     const keys = scanReply[1];
 
     if (keys.length > 0) {

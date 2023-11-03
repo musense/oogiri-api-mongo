@@ -9,6 +9,7 @@ const tagRouter = require("./router/tagRouter");
 const categoryRouter = require("./router/categoryRouter");
 const logRouter = require("./router/logRouter");
 const bannerRouter = require("./router/bannerRouter");
+const editorLinkMangerRouter = require("./router/editorLinkMangerRouter");
 const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const session = require("express-session");
@@ -110,6 +111,7 @@ app.use(tagRouter);
 app.use(categoryRouter);
 app.use(bannerRouter);
 app.use(logRouter);
+app.use(editorLinkMangerRouter);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
