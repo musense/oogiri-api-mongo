@@ -7,6 +7,7 @@ const sitemapRouter = require("./router/sitemapRouter");
 const categoryRouter = require("./router/categoryRouter");
 const bannerRouter = require("./router/bannerRouter");
 const logRouter = require("./router/logRouter");
+const editorLinkMangerRouter = require("./router/editorLinkMangerRouter");
 require("dotenv").config();
 require("./mongoose");
 const session = require("express-session");
@@ -97,6 +98,7 @@ app.use(userRouter);
 app.use(editorRouter);
 app.use(tagRouter);
 app.use(logRouter);
+app.use(editorLinkMangerRouter);
 
 // server.listen(4200)
 ssl.listen(PORT, () => {
