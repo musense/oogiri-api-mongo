@@ -613,6 +613,7 @@ function uploadImage() {
   return upload.fields([
     { name: "homeImagePath", maxCount: 1 },
     { name: "contentImagePath", maxCount: 1 },
+    { name: "imageBlob", maxCount: 1 },
   ]);
 }
 
