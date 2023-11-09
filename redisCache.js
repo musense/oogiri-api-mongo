@@ -1,31 +1,48 @@
+require("dotenv").config();
 const redis = require("redis");
-const client = redis.createClient({ host: "127.0.0.1", port: 6379 });
+// const REDIS_SERVER = process.env.REDIS_SERVER;
+async function connectRedis() {
+  const client = redis.createClient({
+    socket: {
+      host: "127.0.0.1",
+      port: 6379,
+    },
+  });
 
-client.on("error", (error) => {
-  console.error(error);
-});
+  client.on("error", (err) => console.log("Redis Client Error", err));
 
-async function connect() {
-  await client.connect();
+  try {
+    await client.connect();
+    console.log("Connected to Redis");
+  } catch (err) {
+    console.error("Redis connection error", err);
+  }
+
+  return client;
 }
-connect();
+
+const redisClient = connectRedis();
 
 const setCache = async (key, value, expired) => {
+  const client = await redisClient;
   await client.set(key, JSON.stringify(value), { EX: expired, NX: true });
 };
 
 const getCache = async (key) => {
+  const client = await redisClient;
   const result = await client.get(key);
   return result ? JSON.parse(result) : null;
 };
 
 const hSetCache = async (key, value) => {
+  const client = await redisClient;
   await client.HSET(key, JSON.stringify(value));
 };
 
 const scanAndDelete = async () => {
   let cursor = "0";
   try {
+    const client = await redisClient;
     const scanReply = await client.sendCommand([
       "SCAN",
       cursor,

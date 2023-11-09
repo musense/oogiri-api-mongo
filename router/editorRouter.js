@@ -55,6 +55,7 @@ function parseRequestBody(req, res, next) {
     recommendSorting,
     scheduledAt,
     draft,
+    htmlContent,
   } = req.body;
   if (req.method === "POST") {
     res.headTitle = headTitle !== undefined ? JSON.parse(headTitle) : null;
@@ -74,6 +75,8 @@ function parseRequestBody(req, res, next) {
     res.scheduledAt =
       scheduledAt !== undefined ? new Date(JSON.parse(scheduledAt)) : null;
     res.draft = draft !== undefined ? JSON.parse(draft) : false;
+    res.htmlContent =
+      htmlContent !== undefined ? JSON.parse(htmlContent) : null;
   }
   if (req.method === "PATCH") {
     res.headTitle =
@@ -130,6 +133,12 @@ function parseRequestBody(req, res, next) {
         : draft === false
         ? false
         : JSON.parse(draft);
+    res.htmlContent =
+      htmlContent === undefined
+        ? undefined
+        : htmlContent === null
+        ? null
+        : JSON.parse(htmlContent);
   }
   next();
 }
@@ -1957,19 +1966,120 @@ editorRouter.patch("/editor/checkScheduleEditors", async (req, res) => {
 });
 
 editorRouter.patch(
+  "/draftEditor/:id",
+  uploadImage(),
+  verifyUser,
+  parseRequestBody,
+  parseTags,
+  parseCategories,
+  async (req, res) => {
+    const {
+      title,
+      tags,
+      htmlContent,
+      categories,
+      headTitle,
+      headKeyword,
+      headDescription,
+      manualUrl,
+      altText,
+      scheduledAt,
+      draft,
+    } = res;
+
+    let message = "";
+    if (scheduledAt) {
+      message +=
+        "Scheduled time has been set and cannot be for draft articles.\n";
+    }
+    if (draft !== true) {
+      message += "Non-draft articles.\n";
+    }
+    if (message) {
+      res.status(400).send({ message });
+    } else {
+      // As the "getEditor" function cannot accept query parameters but needs to be shared with GET, so need to perform a separate query to retrieve draft articles.
+      const id = req.params.id;
+      let editor = await draftEditor
+        .findOne({ _id: id })
+        .populate({ path: "categories", select: "name" })
+        .populate({ path: "tags", select: "name" });
+      if (editor == undefined) {
+        return res.status(404).json({ message: "can't find editor!" });
+      }
+      res.editor = editor;
+
+      const contentImagePath =
+        req.files.contentImagePath && req.files.contentImagePath[0];
+      const homeImagePath =
+        req.files.homeImagePath && req.files.homeImagePath[0];
+
+      const contentFilename = contentImagePath
+        ? await processImage(contentImagePath, contentImagePath.originalname)
+        : undefined;
+
+      const homeFilename = homeImagePath
+        ? await processImage(homeImagePath, homeImagePath.originalname)
+        : undefined;
+      if (contentFilename !== undefined) {
+        if (homeImagePath) {
+          res.editor.homeImagePath = homeFilename;
+          if (contentFilename === "") {
+            res.editor.contentImagePath = contentFilename;
+          } else {
+            const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+            const match = contentFilename.match(regex);
+
+            if (match && match[1]) {
+              const youtubeUrl = match[1];
+              console.log(youtubeUrl);
+              res.editor.contentImagePath = youtubeUrl;
+            }
+          }
+        } else {
+          res.editor.homeImagePath = `${LOCAL_DOMAIN}saved_image/homepage/${contentFilename}`;
+          res.editor.contentImagePath = `${LOCAL_DOMAIN}saved_image/content/${contentFilename}`;
+        }
+      }
+      if (manualUrl !== undefined) {
+        res.editor.manualUrl = manualUrl;
+        await Sitemap.updateOne(
+          { originalID: res.editor._id, type: "editor" },
+          { $set: { url: `${domain}p_${manualUrl}.html` } }
+        );
+      }
+      if (tags !== undefined) res.editor.tags = [...tags];
+      if (categories !== undefined) res.editor.categories = categories;
+      if (title !== undefined) res.editor.title = title;
+      if (htmlContent !== undefined) res.editor.htmlContent = htmlContent;
+      if (headTitle !== undefined) res.editor.headTitle = headTitle;
+      if (headKeyword !== undefined) res.editor.headKeyword = headKeyword;
+      if (headDescription !== undefined)
+        res.editor.headDescription = headDescription;
+      if (altText !== undefined) res.editor.altText = altText;
+      if (draft !== undefined) res.editor.draft = draft;
+      try {
+        await res.editor.save();
+        res.status(200).send({ message: "Editor update successfully" });
+      } catch (err) {
+        res.status(400).send({ message: err.message });
+      }
+    }
+  }
+);
+
+editorRouter.patch(
   "/editor/:id",
   verifyUser,
   uploadImage(),
   parseRequestBody,
   parseTags,
-  parseHTML,
   parseCategories,
   getEditor,
   async (req, res) => {
     const {
       title,
       tags,
-      content,
       htmlContent,
       categories,
       headTitle,
@@ -2023,7 +2133,6 @@ editorRouter.patch(
     if (tags !== undefined) res.editor.tags = [...tags];
     if (categories !== undefined) res.editor.categories = categories;
     if (title !== undefined) res.editor.title = title;
-    if (content !== undefined) res.editor.content = content;
     if (htmlContent !== undefined) res.editor.htmlContent = htmlContent;
     if (headTitle !== undefined) res.editor.headTitle = headTitle;
     if (headKeyword !== undefined) res.editor.headKeyword = headKeyword;
@@ -2054,17 +2163,49 @@ editorRouter.patch(
 );
 
 editorRouter.post(
+  "/editor/getNewImagePath",
+  verifyUser,
+  uploadImage(),
+  async (req, res) => {
+    try {
+      let imageBlob = req.files.imageBlob && req.files.imageBlob[0];
+
+      if (imageBlob === undefined || imageBlob === null) {
+        return res.status(400).json({ error: "Empty image value" });
+      } else {
+        const imageFilename = imageBlob
+          ? await processImage(imageBlob, imageBlob.originalname)
+          : null;
+        if (imageFilename.startsWith("http")) {
+          const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+          const match = imageFilename.match(regex);
+
+          if (match && match[1]) {
+            const youtubeUrl = match[1];
+            imageBlob = youtubeUrl;
+          }
+        } else {
+          imageBlob = `${LOCAL_DOMAIN}home/saved_image/content/${imageFilename}`;
+        }
+      }
+
+      res.status(201).json({ imageUrl: imageBlob });
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+editorRouter.post(
   "/editor",
   verifyUser,
   uploadImage(),
   parseRequestBody,
-  parseHTML,
   parseTags,
   parseCategories,
   async (req, res) => {
     const {
       title,
-      content,
       htmlContent,
       tags,
       categories,
@@ -2092,7 +2233,7 @@ editorRouter.post(
     if (serialNumber === null) {
       message += "serialNumber is required\n";
     }
-    if (content === "") {
+    if (htmlContent === null) {
       message += "content is required\n";
     }
     if (draft === true) {
@@ -2106,7 +2247,6 @@ editorRouter.post(
         const editorData = {
           serialNumber: serialNumber + 1,
           title,
-          content,
           htmlContent,
           tags,
           categories, //: category ? category._id : null,
@@ -2194,7 +2334,7 @@ editorRouter.post(
           sitemapUrl: newEditorSitemap.url,
         });
       } catch (err) {
-        res.status(400).json({ message: err.message });
+        res.status(500).json({ message: err.message });
       }
     }
   }
@@ -2202,16 +2342,13 @@ editorRouter.post(
 
 editorRouter.post(
   "/tempEditor",
-  // verifyUser,
+  verifyUser,
   uploadImage(),
   parseRequestBody,
   parseHTML,
-  // parseTags,
-  // parseCategories,
   async (req, res) => {
     const {
       title,
-      content,
       htmlContent,
       headTitle,
       headKeyword,
@@ -2238,7 +2375,6 @@ editorRouter.post(
     try {
       const editorData = {
         title,
-        content,
         htmlContent,
         tags,
         categories,
@@ -2271,11 +2407,7 @@ editorRouter.post(
             editorData.contentImagePath = youtubeUrl;
           }
         } else {
-          // const newHomeUrl = copyFileAndGenerateNewUrl(homeFilename);
-          // const newContentUrl = copyFileAndGenerateNewUrl(contentFilename);
           editorData.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/content/${contentFilename}`;
-          // editorData.homeImagePath = newHomeUrl;
-          // editorData.contentImagePath = newContentUrl;
         }
       }
 
@@ -2299,6 +2431,101 @@ editorRouter.post(
       });
     } catch (err) {
       res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+editorRouter.post(
+  "/draftEditor",
+  uploadImage(),
+  parseRequestBody,
+  verifyUser,
+  parseTags,
+  parseCategories,
+  async (req, res) => {
+    let {
+      title,
+      htmlContent,
+      tags,
+      categories,
+      headTitle,
+      headKeyword,
+      headDescription,
+      manualUrl,
+      altText,
+      scheduledAt,
+      draft,
+    } = res;
+    console.log("draft post");
+    const serialNumber = await getMaxSerialNumber();
+    let contentImagePath =
+      req.files.contentImagePath && req.files.contentImagePath[0];
+    let homeImagePath = req.files.homeImagePath && req.files.homeImagePath[0];
+    if (title === null) {
+      title = `[未命名標題草稿${serialNumber + 1}]`;
+    }
+    let message = "";
+    if (scheduledAt) {
+      message +=
+        "Scheduled time has been set and cannot be for draft articles.\n";
+    }
+    // if (draft !== true) {
+    //   message += "Non-draft articles.\n";
+    // }
+    if (message) {
+      res.status(400).send({ message });
+    } else {
+      try {
+        const editorData = {
+          serialNumber: serialNumber + 1,
+          title,
+          htmlContent,
+          tags,
+          categories, //: category ? category._id : null,
+          headTitle,
+          headKeyword,
+          headDescription,
+          manualUrl,
+          altText,
+          scheduledAt,
+          draft,
+        };
+
+        if (contentImagePath === undefined && homeImagePath === undefined) {
+          editorData.contentImagePath = null;
+          editorData.homeImagePath = null;
+        } else {
+          const contentFilename = contentImagePath
+            ? await processImage(
+                contentImagePath,
+                contentImagePath.originalname
+              )
+            : null;
+
+          const homeFilename = homeImagePath
+            ? await processImage(homeImagePath, homeImagePath.originalname)
+            : null;
+          if (homeImagePath && homeFilename.startsWith("http")) {
+            editorData.homeImagePath = homeFilename;
+            const regex = /src="(https:\/\/www\.youtube\.com\/embed\/[^"]+)"/;
+            const match = contentFilename.match(regex);
+
+            if (match && match[1]) {
+              const youtubeUrl = match[1];
+              editorData.contentImagePath = youtubeUrl;
+            }
+          } else {
+            editorData.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/homepage/${contentFilename}`;
+            editorData.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/content/${contentFilename}`;
+          }
+        }
+        const newDraft = new draftEditor(editorData);
+        await newDraft.save();
+
+        res.status(201).json({ newDraft });
+      } catch (err) {
+        res.status(400).json({ message: err.message });
+      }
     }
   }
 );
@@ -2377,6 +2604,21 @@ editorRouter.delete("/tempEditor", verifyUser, async (req, res) => {
     }
     await tempEditor.deleteMany({});
     res.status(200).send("Files were deleted successfully");
+  } catch (err) {
+    res.status(500).send({ message: err.message });
+  }
+});
+
+editorRouter.delete("/draftEditor", verifyUser, async (req, res) => {
+  const deleteNumber = req.body.serialNumber;
+  try {
+    let deleteEditor = await draftEditor.deleteOne({
+      serialNumber: deleteNumber,
+    });
+    if (deleteEditor.deletedCount === 0) {
+      return res.status(404).json({ message: "No matching draftEditor found" });
+    }
+    res.status(201).json({ message: "Delete draftEditor successful!" });
   } catch (err) {
     res.status(500).send({ message: err.message });
   }
