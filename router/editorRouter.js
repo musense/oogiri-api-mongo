@@ -2165,6 +2165,7 @@ editorRouter.patch(
 
 editorRouter.post(
   "/editor/getNewImagePath",
+  verifyUser,
   uploadImage(),
   async (req, res) => {
     try {
