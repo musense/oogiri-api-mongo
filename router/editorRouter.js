@@ -42,6 +42,7 @@ function getIpInfo(req, res, next) {
   next();
 }
 function parseRequestBody(req, res, next) {
+  console.log("req.body:", req.body);
   const {
     headTitle,
     headKeyword,
@@ -2154,6 +2155,7 @@ editorRouter.patch(
         req.session.user,
         true
       );
+      console.log("res.editor:", res.editor);
       await res.editor.save();
       await scanAndDelete();
       res.status(201).send({ message: "Editor update successfully" });
