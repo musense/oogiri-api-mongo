@@ -148,7 +148,7 @@ async function processImage(file, originalFilename) {
   } else if (file.mimetype.startsWith("image/")) {
     // compress image using sharp
     const compressedImage = await sharp(file.buffer)
-      .resize(942, 365, { fit: "inside", withoutEnlargement: true })
+      // .resize(942, 365, { fit: "inside", withoutEnlargement: true })
       .toBuffer({
         resolveWithObject: true,
         quality: 100,

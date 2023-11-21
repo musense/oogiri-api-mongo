@@ -1687,16 +1687,6 @@ editorRouter.get("/tempEditor/:id", verifyUser, async (req, res, next) => {
   }
 });
 
-editorRouter.get("/domainInfo", verifyUser, async (req, res, next) => {
-  try {
-    const result = { domain: "http://10.88.0.103:3000" };
-    console.log("get domainInfo");
-    res.status(200).send({ data: result });
-  } catch (err) {
-    return res.status(500).send({ message: err.message });
-  }
-});
-
 //新增文章點擊率
 editorRouter.patch(
   "/editor/incrementPageview/:id",
@@ -2348,7 +2338,6 @@ editorRouter.post(
   verifyUser,
   uploadImage(),
   parseRequestBody,
-  parseHTML,
   async (req, res) => {
     const {
       title,
