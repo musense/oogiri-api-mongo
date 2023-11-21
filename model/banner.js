@@ -88,7 +88,7 @@ const checkStatus = function (next) {
   if (this.startDate > now) {
     this.status = "已排程";
   } else if (
-    this.eternal === true ||
+    (this.eternal === true && this.display === true) ||
     (this.startDate <= now && now < this.endDate && this.display === true)
   ) {
     this.status = "進行中";
