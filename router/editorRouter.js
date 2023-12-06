@@ -122,12 +122,22 @@ function parseRequestBody(req, res, next) {
         : hidden === null
         ? false
         : JSON.parse(hidden);
-    res.scheduledAt =
-      scheduledAt === undefined
-        ? undefined
-        : scheduledAt === null
-        ? null
-        : new Date(JSON.parse(scheduledAt));
+    if (scheduledAt === undefined) {
+      res.scheduledAt = undefined;
+    } else {
+      let parsedScheduledAt = JSON.parse(scheduledAt);
+
+      // 如果parsedScheduledAt是 {"scheduledAt": null}
+      if (
+        typeof parsedScheduledAt === "object" &&
+        parsedScheduledAt.scheduledAt === null
+      ) {
+        res.scheduledAt = null;
+      } else {
+        // 在其他情況下，假設 parsedScheduledAt 是一個可以被轉換為日期的值
+        res.scheduledAt = new Date(parsedScheduledAt);
+      }
+    }
     res.draft =
       draft === undefined
         ? undefined
@@ -145,10 +155,24 @@ function parseRequestBody(req, res, next) {
 }
 
 async function getMaxSerialNumber() {
-  const maxSerialNumberEditor = await Editor.findOne()
-    .sort({ serialNumber: -1 })
-    .select("-_id serialNumber");
-  return maxSerialNumberEditor ? maxSerialNumberEditor.serialNumber : 0;
+  const [maxSerialNumberEditor, maxSerialNumberDraftEditor] = await Promise.all(
+    [
+      Editor.findOne().sort({ serialNumber: -1 }).select("-_id serialNumber"),
+      draftEditor
+        .findOne()
+        .sort({ serialNumber: -1 })
+        .select("-_id serialNumber"),
+    ]
+  );
+
+  const maxEditorSerialNumber = maxSerialNumberEditor
+    ? maxSerialNumberEditor.serialNumber
+    : 0;
+  const maxDraftEditorSerialNumber = maxSerialNumberDraftEditor
+    ? maxSerialNumberDraftEditor.serialNumber
+    : 0;
+
+  return Math.max(maxEditorSerialNumber, maxDraftEditorSerialNumber);
 }
 
 async function parseCategories(req, res, next) {
@@ -2029,16 +2053,12 @@ editorRouter.patch(
             }
           }
         } else {
-          res.editor.homeImagePath = `${LOCAL_DOMAIN}saved_image/homepage/${contentFilename}`;
-          res.editor.contentImagePath = `${LOCAL_DOMAIN}saved_image/content/${contentFilename}`;
+          res.editor.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/homepage/${contentFilename}`;
+          res.editor.contentImagePath = `${LOCAL_DOMAIN}home/saved_image/content/${contentFilename}`;
         }
       }
       if (manualUrl !== undefined) {
         res.editor.manualUrl = manualUrl;
-        await Sitemap.updateOne(
-          { originalID: res.editor._id, type: "editor" },
-          { $set: { url: `${domain}p_${manualUrl}.html` } }
-        );
       }
       if (tags !== undefined) res.editor.tags = [...tags];
       if (categories !== undefined) res.editor.categories = categories;
@@ -2052,7 +2072,8 @@ editorRouter.patch(
       if (draft !== undefined) res.editor.draft = draft;
       try {
         await res.editor.save();
-        res.status(200).send({ message: "Editor update successfully" });
+        await scanAndDelete();
+        res.status(200).send({ message: "Draft Editor update successfully" });
       } catch (err) {
         res.status(400).send({ message: err.message });
       }
@@ -2215,7 +2236,25 @@ editorRouter.post(
       draft,
     } = res;
 
-    const serialNumber = await getMaxSerialNumber();
+    let serialNumber = req.body.serialNumber;
+    if (!serialNumber) {
+      serialNumber = (await getMaxSerialNumber()) + 1;
+    } else {
+      try {
+        //Delete draft articles to avoid data duplication.
+        let deleteDraftEditor = await draftEditor.deleteOne({
+          serialNumber: serialNumber,
+        });
+        if (!deleteDraftEditor) {
+          return res
+            .status(404)
+            .json({ message: "No matching draftEditor found" });
+        }
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    }
+
     let contentImagePath =
       req.files.contentImagePath && req.files.contentImagePath[0];
     let homeImagePath = req.files.homeImagePath && req.files.homeImagePath[0];
@@ -2238,7 +2277,7 @@ editorRouter.post(
     } else {
       try {
         const editorData = {
-          serialNumber: serialNumber + 1,
+          serialNumber: serialNumber,
           title,
           htmlContent,
           tags,
@@ -2278,6 +2317,8 @@ editorRouter.post(
             if (match && match[1]) {
               const youtubeUrl = match[1];
               editorData.contentImagePath = youtubeUrl;
+            } else {
+              editorData.contentImagePath = contentFilename;
             }
           } else {
             editorData.homeImagePath = `${LOCAL_DOMAIN}home/saved_image/homepage/${contentFilename}`;
@@ -2448,7 +2489,6 @@ editorRouter.post(
       scheduledAt,
       draft,
     } = res;
-    console.log("draft post");
     const serialNumber = await getMaxSerialNumber();
     let contentImagePath =
       req.files.contentImagePath && req.files.contentImagePath[0];
@@ -2461,9 +2501,6 @@ editorRouter.post(
       message +=
         "Scheduled time has been set and cannot be for draft articles.\n";
     }
-    // if (draft !== true) {
-    //   message += "Non-draft articles.\n";
-    // }
     if (message) {
       res.status(400).send({ message });
     } else {
@@ -2473,7 +2510,7 @@ editorRouter.post(
           title,
           htmlContent,
           tags,
-          categories, //: category ? category._id : null,
+          categories,
           headTitle,
           headKeyword,
           headDescription,
@@ -2513,6 +2550,7 @@ editorRouter.post(
         }
         const newDraft = new draftEditor(editorData);
         await newDraft.save();
+        await scanAndDelete();
 
         res.status(201).json({ newDraft });
       } catch (err) {
@@ -2602,10 +2640,10 @@ editorRouter.delete("/tempEditor", verifyUser, async (req, res) => {
 });
 
 editorRouter.delete("/draftEditor", verifyUser, async (req, res) => {
-  const deleteNumber = req.body.serialNumber;
+  const deleteNumber = req.body.id;
   try {
     let deleteEditor = await draftEditor.deleteOne({
-      serialNumber: deleteNumber,
+      _id: deleteNumber,
     });
     if (deleteEditor.deletedCount === 0) {
       return res.status(404).json({ message: "No matching draftEditor found" });
@@ -2617,31 +2655,95 @@ editorRouter.delete("/draftEditor", verifyUser, async (req, res) => {
 });
 
 editorRouter.delete("/editor/cleanupIps", async (req, res) => {
+  const handleErrors = (res, error) => {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  };
   try {
-    // Get the current time minus one hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const oldLogs = await Ips.find({ createdAt: { $lt: oneHourAgo } }).select(
       "-_id sourceIp relatedId createdAt"
     );
+    const filePath = path.join(DBLOG_FILE_PATH, "ipLogs.json");
+    const outputFilePath = path.join(DBLOG_FILE_PATH, "no_duplicate_IP.json");
+
     if (oldLogs.length === 0) {
-      res.json({ message: "No data need to write" });
-    } else if (oldLogs.length > 0) {
-      // Write logs to a file
-      const filePath = path.join(DBLOG_FILE_PATH, "ipLogs_jp.json");
-      fs.appendFileSync(filePath, JSON.stringify(oldLogs, null, 2));
+      res.status(200).json({ message: "No IP need to delete." });
+    } else {
+      const readAndValidateJSONFile = async (filePath) => {
+        return new Promise(async (resolve, reject) => {
+          let rawData = "";
+          const readStream = fs.createReadStream(filePath, {
+            encoding: "utf8",
+          });
+          readStream.on("data", (chunk) => (rawData += chunk));
+          readStream.on("end", () => {
+            try {
+              const jsonData = JSON.parse(rawData);
+              resolve(jsonData);
+            } catch (err) {
+              const splitContent = rawData.split("][");
+              const reformattedContent = "[" + splitContent.join("],[") + "]";
+              resolve(JSON.parse(reformattedContent));
+            }
+          });
+          readStream.on("error", reject);
+        });
+      };
 
-      // Find and remove all IPs that were created more than one hour ago
-      await Ips.deleteMany({
-        createdAt: { $lt: oneHourAgo },
-      });
+      const writeJSONFile = async (filePath, data) => {
+        const writeStream = fs.createWriteStream(filePath, {
+          encoding: "utf8",
+        });
+        const readableStream = Readable.from([JSON.stringify(data, null, 2)], {
+          encoding: "utf8",
+        });
 
-      // Return the result of the operation
+        try {
+          await pipelineAsync(readableStream, writeStream);
+        } catch (err) {
+          console.error("Pipeline failed:", err);
+        }
+      };
+
+      let existingData = [];
+      if (fs.existsSync(filePath)) {
+        existingData = await readAndValidateJSONFile(filePath);
+      }
+      const combinedData = existingData.concat(oldLogs);
+
+      await writeJSONFile(filePath, combinedData);
+
+      // Load existing no_duplicate_IP.json data if exists
+      let uniqueData = [];
+      if (fs.existsSync(outputFilePath)) {
+        uniqueData = await readAndValidateJSONFile(outputFilePath);
+      }
+
+      const uniqueSourceIps = new Set(uniqueData.map((log) => log.sourceIp));
+      // Create a set with unique sourceIps from existingData
+      const newUniqueSourceIps = new Set(
+        existingData.map((log) => log.sourceIp)
+      );
+
+      // Create an array to hold the truly unique logs to be appended to no_duplicate_IP.json
+      const trulyUniqueOldLogs = Array.from(newUniqueSourceIps)
+        .filter((sourceIp) => !uniqueSourceIps.has(sourceIp))
+        .map((sourceIp) => {
+          return { sourceIp }; // Replace this with the actual log object you want to store
+        });
+      // Write uniqueOldLogs to no_duplicate_IP.json
+      const combinedUniqueData = uniqueData.concat(trulyUniqueOldLogs);
+      await writeJSONFile(outputFilePath, combinedUniqueData);
+
+      await Ips.deleteMany({ createdAt: { $lt: oneHourAgo } });
+
       res.status(200).json({
         message: `Deleted ${oldLogs.length} IP(s) that were created more than one hour ago.`,
       });
     }
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    handleErrors(res, error);
   }
 });
 
