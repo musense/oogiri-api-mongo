@@ -886,7 +886,8 @@ editorRouter.get("/editor", verifyUser, parseQuery, async (req, res) => {
     let end;
     // Try to get data from cache
     const generateCacheKey = (query) => {
-      let objectTypeString = "editorList";
+      //UAT環境會與其他專案衝突, 加上字串區隔
+      let objectTypeString = "oogiri editorList";
       for (const [key, value] of Object.entries(query)) {
         objectTypeString += `:${key}:${value}`;
       }
