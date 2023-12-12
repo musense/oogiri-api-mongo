@@ -47,7 +47,7 @@ const scanAndDelete = async () => {
       "SCAN",
       cursor,
       "MATCH",
-      "editorList:*",
+      "oogiri:editorList:*",
       "COUNT",
       "100",
     ]);
