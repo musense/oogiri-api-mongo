@@ -2498,7 +2498,7 @@ editorRouter.post(
     let contentImagePath =
       req.files.contentImagePath && req.files.contentImagePath[0];
     let homeImagePath = req.files.homeImagePath && req.files.homeImagePath[0];
-    if (title === null) {
+    if (title === null || title === "") {
       title = `[未命名標題草稿${serialNumber + 1}]`;
     }
     let message = "";
